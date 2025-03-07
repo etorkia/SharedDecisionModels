@@ -5,7 +5,7 @@ const COOPERATE = :cooperate  # free trade: no tariff
 const DEFECT = :defect     # impose tariff
 
 # Define the triangular distribution for tariff rates: min=5, mode=20, max=30.
-tri_dist = TriangularDist(10.0, 30.0, 20.0)
+tri_dist = TriangularDist(10.0, 50.0, 25.0)
 
 # TradeData struct holds bilateral trade data (in billions of dollars)
 struct TradeData
@@ -14,22 +14,22 @@ struct TradeData
 end
 
 # Example baseline trade data (replace with current figures as needed)
-trade_data = Dict(
+const trade_data = Dict(
     "Canada" => TradeData(250.0, 300.0),
     "Mexico" => TradeData(200.0, 350.0),
     "China" => TradeData(130.0, 450.0),
     "Japan" => TradeData(60.0, 140.0),
-    "Germany" => TradeData(70.0, 100.0)
+    "European Union" => TradeData(376.0, 545.0)
 )
 
-# GDP data (in billions of dollars)
-gdp_data = Dict(
-    "US" => 21000.0,
-    "Canada" => 1740.0,
-    "Mexico" => 1270.0,
-    "China" => 17700.0,
-    "Japan" => 5150.0,
-    "Germany" => 4000.0
+# GDP data (in billions of dollars) datacommons.org
+const gdp_data = Dict(
+    "US" => 27700.0,
+    "Canada" => 2200.0,
+    "Mexico" => 1790.0,
+    "China" => 17800.0,
+    "Japan" => 4200.0,
+    "European Union" => 18600.0
 )
 
 # Normalization factor to scale down trade volumes
@@ -79,8 +79,8 @@ function choose_strategy(prev_opponent_action::Symbol)
 end
 
 # Simulate a repeated game with counter-tariff behavior,
-# printing the details of each tariff round including the effective tariff rate.
-function simulate_trade_war_by_country(rounds::Int)
+# printing the details of each tariff round including the effective tariff rate when "display_rounds=true".
+function simulate_trade_war_by_country(rounds::Int; display_rounds=true)
     partners = collect(keys(trade_data))
     us_total = 0.0
     us_cumulative = Dict{String,Float64}()
@@ -103,23 +103,23 @@ function simulate_trade_war_by_country(rounds::Int)
     end
 
     for r in 1:rounds
-        println("\n--- Round $r ---")
+        if display_rounds == true println("\n--- Round $r ---") end
         for partner in partners
-            println("\nPartner: $partner")
-            println("Previous actions: US = $(prev_us_actions[partner]), $partner = $(prev_partner_actions[partner])")
+            if display_rounds == true println("\nPartner: $partner") end
+            if display_rounds == true println("Previous actions: US = $(prev_us_actions[partner]), $partner = $(prev_partner_actions[partner])") end
 
             # Choose strategies based on the opponent's previous move.
             us_strategy = choose_strategy(prev_partner_actions[partner])
             partner_strategy = choose_strategy(prev_us_actions[partner])
 
-            println("Chosen strategies: US -> $(us_strategy), $partner -> $(partner_strategy)")
+            if display_rounds == true println("Chosen strategies: US -> $(us_strategy), $partner -> $(partner_strategy)") end
 
             # Determine effective tariff rates for this round:
             # For the US: if partner defects, then partner imposes a tariff on US goods.
             us_eff_tariff = partner_strategy == DEFECT ? rand(tri_dist) : 0.0
             # For the partner: if US defects, then US imposes a tariff on partner goods.
             partner_eff_tariff = us_strategy == DEFECT ? rand(tri_dist) : 0.0
-            println("Effective tariff rates this round: US faces $(round(us_eff_tariff, digits=2))% from $partner, $partner faces $(round(partner_eff_tariff, digits=2))% from US")
+            if display_rounds == true println("Effective tariff rates this round: US faces $(round(us_eff_tariff, digits=2))% from $partner, $partner faces $(round(partner_eff_tariff, digits=2))% from US") end
 
             # Accumulate tariff rates for averaging.
             effective_tariff_US[partner] += us_eff_tariff
@@ -127,7 +127,7 @@ function simulate_trade_war_by_country(rounds::Int)
 
             # Simulate the round for this bilateral interaction.
             us_pay, part_pay = simulate_round(trade_data[partner], us_strategy, partner_strategy)
-            println("Round payoff: US = $(round(us_pay, digits=2)), $partner = $(round(part_pay, digits=2))")
+            if display_rounds == true println("Round payoff: US = $(round(us_pay, digits=2)), $partner = $(round(part_pay, digits=2))") end
 
             # Update cumulative totals.
             us_total += us_pay
@@ -138,7 +138,7 @@ function simulate_trade_war_by_country(rounds::Int)
             prev_us_actions[partner] = us_strategy
             prev_partner_actions[partner] = partner_strategy
 
-            println("Cumulative totals for $partner: US = $(round(us_cumulative[partner], digits=2)), $partner = $(round(partner_totals[partner], digits=2))")
+            if display_rounds == true println("Cumulative totals for $partner: US = $(round(us_cumulative[partner], digits=2)), $partner = $(round(partner_totals[partner], digits=2))")  end
         end
     end
 
@@ -147,7 +147,7 @@ end
 
 # Run the simulation for a specified number of rounds.
 rounds = 5
-us_total, us_by_country, partner_scores, effective_tariff_US, effective_tariff_Partner = simulate_trade_war_by_country(rounds)
+us_total, us_by_country, partner_scores, effective_tariff_US, effective_tariff_Partner = simulate_trade_war_by_country(rounds; display_rounds=true)
 
 println("\nAfter $rounds rounds (with normalization factor = $(normalization_factor)):")
 println("Overall US cumulative payoff (normalized, 'billion-dollar units'): $(round(us_total, digits=2))")
@@ -185,3 +185,4 @@ for partner in keys(trade_data)
     println(" - US facing $partner: $(round(avg_us_tariff, digits=2))% per round on average")
     println(" - $partner facing US: $(round(avg_partner_tariff, digits=2))% per round on average")
 end
+
